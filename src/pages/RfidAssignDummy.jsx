@@ -221,7 +221,7 @@ export default function RfidAssignDummy() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Class
+           Class
           </label>
           <select 
             value={selectedClass} 
@@ -236,7 +236,7 @@ export default function RfidAssignDummy() {
 
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Section
+            Section
           </label>
           <select 
             value={selectedSection} 
@@ -251,7 +251,7 @@ export default function RfidAssignDummy() {
 
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Session
+          Session
           </label>
           <select 
             value={selectedSession} 

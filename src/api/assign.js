@@ -1,6 +1,7 @@
 // All API calls
 export const getClasses = async () => {
   try {
+    // no payload here
     const response = await fetch('/api/classes');
     if (!response.ok) throw new Error('Failed to fetch classes');
     return await response.json();
@@ -12,6 +13,7 @@ export const getClasses = async () => {
 
 export const getSections = async () => {
   try {
+    // no payload here
     const response = await fetch('/api/sections');
     if (!response.ok) throw new Error('Failed to fetch sections');
     return await response.json();
@@ -23,6 +25,7 @@ export const getSections = async () => {
 
 export const getSessions = async () => {
   try {
+    // no payload here
     const response = await fetch('/api/sessions');
     if (!response.ok) throw new Error('Failed to fetch sessions');
     return await response.json();
@@ -34,12 +37,15 @@ export const getSessions = async () => {
 
 export const getStudents = async (classId, sectionId, sessionId) => {
   try {
+    // payload (query params)
     const params = new URLSearchParams({
       classId,
       sectionId,
-      sessionId
+      sessionId,
     });
-    
+
+    console.log("getStudents payload:", { classId, sectionId, sessionId });
+
     const response = await fetch(`/api/students?${params}`);
     if (!response.ok) throw new Error('Failed to fetch students');
     return await response.json();
@@ -51,12 +57,16 @@ export const getStudents = async (classId, sectionId, sessionId) => {
 
 export const assignRfid = async (studentId, rfid) => {
   try {
+    // payload
+    const payload = { studentId, rfid };
+    console.log("assignRfid payload:", payload);
+
     const response = await fetch('/api/assign-rfid', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ studentId, rfid })
+      body: JSON.stringify(payload), // <-- actual payload
     });
     
     if (!response.ok) {
@@ -73,12 +83,16 @@ export const assignRfid = async (studentId, rfid) => {
 
 export const removeRfid = async (studentId) => {
   try {
+    // payload
+    const payload = { studentId };
+    console.log("removeRfid payload:", payload);
+
     const response = await fetch('/api/remove-rfid', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ studentId })
+      body: JSON.stringify(payload), // <-- actual payload
     });
     
     if (!response.ok) {

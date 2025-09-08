@@ -7,21 +7,23 @@ import AssignTable from "../Components/rfidAssign/AssignTable";
 import AssignAlert from "../Components/allerts/AssignAlert";
 
 export default function RfidAssignPage() {
-  const [classes, setClasses] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [sessions, setSessions] = useState([]);
-  const [selectedClass, setSelectedClass] = useState("");
+  // ---------------- STATES ----------------
+  const [classes, setClasses] = useState([]);              
+  const [sections, setSections] = useState([]);           
+  const [sessions, setSessions] = useState([]);            
+  const [selectedClass, setSelectedClass] = useState("");  
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedSession, setSelectedSession] = useState("");
-  const [students, setStudents] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [rfid, setRfid] = useState("");
-  const [assignedRfids, setAssignedRfids] = useState(new Set());
-  const [status, setStatus] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef(null);
-  const alertTimerRef = useRef(null);
+  const [students, setStudents] = useState([]);           
+  const [currentIndex, setCurrentIndex] = useState(0);     
+  const [rfid, setRfid] = useState("");                    
+  const [assignedRfids, setAssignedRfids] = useState(new Set()); 
+  const [status, setStatus] = useState(null);             
+  const [isLoading, setIsLoading] = useState(false);       
+  const inputRef = useRef(null);                          
+  const alertTimerRef = useRef(null);                      
 
+  // ---------------- INITIAL LOAD ----------------
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -43,18 +45,24 @@ export default function RfidAssignPage() {
     fetchData();
   }, []);
 
+  // ---------------- STUDENTS FETCH ----------------
   useEffect(() => {
     const fetchStudents = async () => {
       if (!selectedClass || !selectedSection || !selectedSession) return;
       setIsLoading(true);
       try {
         const data = await api.getStudents(selectedClass, selectedSection, selectedSession);
+        // Sort student list and add assigned flag
         setStudents(data.map(s => ({ ...s, assigned: !!s.rfid })));
         
+        // Set first unassigned student as currentIndex
         const firstUnassignedIndex = data.findIndex(s => !s.rfid);
         setCurrentIndex(firstUnassignedIndex >= 0 ? firstUnassignedIndex : 0);
         
+        // Create set of already assigned RFIDs
         setAssignedRfids(new Set(data.filter(d => d.rfid).map(d => d.rfid)));
+        
+        // Autofocus input box
         setTimeout(() => inputRef.current?.focus(), 120);
       } catch (err) {
         showStatus({ type: "error", message: "Failed to load students" });
@@ -65,19 +73,22 @@ export default function RfidAssignPage() {
     fetchStudents();
   }, [selectedClass, selectedSection, selectedSession]);
 
+  // ---------------- ALERT STATUS ----------------
   const showStatus = (obj) => {
     setStatus(obj);
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
-    alertTimerRef.current = setTimeout(() => setStatus(null), 3000);
+    alertTimerRef.current = setTimeout(() => setStatus(null), 3000); // hide alert after 3 sec
   };
 
+  // ---------------- SCAN HANDLER ----------------
   const handleScan = (e) => {
     if (e.key === "Enter") {
       if (!rfid.trim()) return showStatus({ type: "error", message: "Please scan RFID first" });
-      assignRfid();
+      assignRfid(); // Assign RFID on Enter key
     }
   };
 
+  // ---------------- ASSIGN RFID ----------------
   const assignRfid = async () => {
     if (!rfid) return;
     if (assignedRfids.has(rfid)) return showStatus({ type: "error", message: `RFID ${rfid} is already assigned` });
@@ -88,16 +99,21 @@ export default function RfidAssignPage() {
     try {
       const res = await api.assignRfid(currentStudent.id, rfid);
       if (res.success) {
+        // Update student with new RFID
         const updated = [...students];
         updated[currentIndex] = { ...currentStudent, rfid, assigned: true };
         setStudents(updated);
+
+        // Add new RFID to set
         setAssignedRfids(prev => new Set(prev).add(rfid));
         showStatus({ type: "success", message: `RFID ${rfid} assigned to ${currentStudent.name}` });
         
+        // Move to next unassigned student
         let next = currentIndex + 1;
         while (next < updated.length && updated[next].assigned) next++;
         setCurrentIndex(Math.min(next, updated.length));
         
+        // Clear input + refocus
         setRfid("");
         setTimeout(() => inputRef.current?.focus(), 120);
       } else {
@@ -110,21 +126,25 @@ export default function RfidAssignPage() {
     }
   };
 
+  // ---------------- REMOVE RFID ----------------
   const handleRemoveRfid = async (studentId, rfidToRemove) => {
     if (!studentId) return;
     setIsLoading(true);
     try {
       const res = await api.removeRfid(studentId);
       if (res.success) {
+        // Remove RFID from student
         const updated = students.map(s => (s.id === studentId ? { ...s, rfid: "", assigned: false } : s));
         setStudents(updated);
 
+        // Remove RFID from assignedRfids set
         setAssignedRfids(prev => {
           const copy = new Set(prev);
           copy.delete(rfidToRemove);
           return copy;
         });
 
+        // Move currentIndex back to that student
         const idx = updated.findIndex(s => s.id === studentId);
         if (idx >= 0) setCurrentIndex(idx);
 
@@ -140,19 +160,21 @@ export default function RfidAssignPage() {
     }
   };
 
+  // ---------------- STUDENT STATS ----------------
   const stats = {
     total: students.length,
     assigned: students.filter(s => s.assigned).length,
     pending: students.filter(s => !s.assigned).length
   };
 
+  // ---------------- PROGRESS BAR ----------------
   const ProgressBar = () => {
     const assignedCount = students.filter(student => student.assigned).length;
     const total = students.length;
     const pct = total === 0 ? 0 : Math.round((assignedCount / total) * 100);
     
     return (
-      <div className="my-6 w-full">
+      <div className="relative my-6 w-full">
         <div className="flex justify-between text-sm text-gray-300 mb-2">
           <span>Assignment Progress</span>
           <span>{assignedCount} / {total} ({pct}%)</span>
@@ -174,21 +196,23 @@ export default function RfidAssignPage() {
     );
   };
 
+  // ---------------- SELECT FILTERS ----------------
   const SelectFilters = () => {
     const selectBaseClass = `
       w-full px-4 py-3 bg-gray-800/70 border border-gray-600/50 
       rounded-xl text-white placeholder-gray-400 text-sm font-medium
       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
       transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-      appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAzc3ZnIj48cGF0aCBkPSJNNCA2TDggMTBMMTIgNiIgc3Ryb2tlPSIjOEU5MEE2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] 
+      appearance-none bg-[url('data:image/svg+xml;base64,...')] 
       bg-no-repeat bg-[center_right_1rem] bg-[length:16px_16px]
     `;
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Class select dropdown */}
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Class
+          Class
           </label>
           <select 
             value={selectedClass} 
@@ -201,9 +225,10 @@ export default function RfidAssignPage() {
           </select>
         </div>
 
+        {/* Section select dropdown */}
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Section
+             Section
           </label>
           <select 
             value={selectedSection} 
@@ -216,9 +241,10 @@ export default function RfidAssignPage() {
           </select>
         </div>
 
+        {/* Session select dropdown */}
         <div>
           <label className="block mb-2 text-sm font-semibold text-gray-300 flex items-center">
-            <FaFilter className="mr-2 text-blue-400" /> Session
+            Session
           </label>
           <select 
             value={selectedSession} 
@@ -234,8 +260,10 @@ export default function RfidAssignPage() {
     );
   };
 
+  // ---------------- UI RENDER ----------------
   return (
     <div className="h-screen overflow-auto bg-gradient-to-br from-gray-900 to-gray-800 p-4">
+      {/* Alert component */}
       <AssignAlert status={status} />
       
       <div className="max-w-6xl mx-auto">
@@ -245,8 +273,10 @@ export default function RfidAssignPage() {
             <p className="text-gray-300">Assign RFID cards to students by scanning them one by one. Use Remove to replace a damaged card.</p>
           </div>
 
+          {/* Filter dropdowns */}
           <SelectFilters />
 
+          {/* Stats (Total, Assigned, Pending) */}
           {selectedClass && selectedSection && selectedSession && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
@@ -264,12 +294,14 @@ export default function RfidAssignPage() {
             </div>
           )}
 
+          {/* Loading spinner */}
           {isLoading && !students.length && (
             <div className="flex justify-center my-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
             </div>
           )}
 
+          {/* Assign input (RFID scanner input) */}
           {!isLoading && students.length > 0 && currentIndex < students.length && (
             <AssignInput
               student={students[currentIndex]} 
@@ -281,10 +313,12 @@ export default function RfidAssignPage() {
             />
           )}
 
+          {/* Progress bar */}
           {!isLoading && students.length > 0 && (
             <ProgressBar />
           )}
 
+          {/* Student table */}
           {!isLoading && students.length > 0 && (
             <AssignTable
               students={students} 
@@ -294,6 +328,7 @@ export default function RfidAssignPage() {
             />
           )}
 
+          {/* Empty state */}
           {!isLoading && students.length === 0 && selectedClass && selectedSection && selectedSession && (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">No students found for the selected filters</div>
@@ -310,24 +345,14 @@ export default function RfidAssignPage() {
             </div>
           )}
 
+          {/* Initial message */}
           {!isLoading && !selectedClass && !selectedSection && !selectedSession && (
             <div className="text-center text-gray-400 py-12">
               <div className="mb-4 text-lg">Please select class, section and session to begin</div>
-              <FaFilter className="inline-block text-4xl text-blue-400 opacity-50" />
             </div>
           )}
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translate(-50%, -10px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
